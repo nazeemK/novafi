@@ -1,0 +1,30 @@
+{
+  "id": "mcb-parser-update",
+  "title": "Update MCB Parser Logic",
+  "description": "Replace the existing extractMCBTransactions function in mcbParser.ts to properly extract the 'destinatory' field from MCB PDF statements. Implement enhanced parsing with multi-line descriptions and regex matching for references and destinatory information.",
+  "priority": "high",
+  "status": "in-progress",
+  "tags": ["backend", "parser", "bugfix"],
+  "components": ["backend"],
+  "assignee": "",
+  "created": "2023-09-14T12:00:00Z",
+  "updated": "2023-09-14T12:00:00Z",
+  "subtasks": [
+    {
+      "title": "Replace existing extractMCBTransactions function",
+      "completed": true
+    },
+    {
+      "title": "Add destinatory field extraction logic",
+      "completed": true
+    },
+    {
+      "title": "Improve reference extraction with enhanced regex patterns",
+      "completed": true
+    },
+    {
+      "title": "Implement multi-line description handling",
+      "completed": true
+    }
+  ]
+} 

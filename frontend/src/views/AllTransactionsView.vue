@@ -422,7 +422,8 @@ const saveEdit = async () => {
       description: editedTransaction.value.description,
       amount: Number(editedTransaction.value.amount),
       type: editedTransaction.value.type,
-      balance: Number(editedTransaction.value.balance)
+      balance: Number(editedTransaction.value.balance),
+      destinatory: editedTransaction.value.destinatory || ''
     };
     
     // Update using local function 

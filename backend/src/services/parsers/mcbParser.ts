@@ -1,134 +1,133 @@
+// src/services/parsers/mcbParser.ts
 import { parseDate, parseAmount, getCategoryFromDescription } from './utils';
 import { ParsedTransaction } from '../types';
 
 /**
- * Extract transactions from MCB bank statement
+ * Extract transactions from MCB bank statement text content. V5
+ * Adapted for pdf-parse output where columns might be concatenated.
  * @param text Bank statement text content
  */
 export function extractMCBTransactions(text: string): ParsedTransaction[] {
-  const transactions: ParsedTransaction[] = [];
-  
-  // Split the text into lines for processing
-  const lines = text.split('\n');
-  console.info('=== RAW CONTENT START ===');
-  console.info(text);
-  console.info('=== RAW CONTENT END ===');
-  console.info('MCB Parser: Processing', lines.length, 'lines');
-  
-  // MCB pattern: Date, Description, Amount, Balance
-  // Look for lines with date patterns
-  const datePattern = /(\d{1,2}\/\d{1,2}\/\d{2,4})/;
-  const amountPattern = /([\d,]+\.\d{2})/;
-  const referencePattern = /((?:Inward Transfer|Instant Payment|JuicePro Transfer)\s+[A-Z0-9\\]+)/;
-  
-  let currentBalance = 0;
-  
-  // Log a preview of lines for diagnostic purposes
-  console.info('MCB Parser: First 10 lines sample:');
-  for (let i = 0; i < Math.min(lines.length, 10); i++) {
-    console.info(`Line ${i}: ${lines[i]}`);
-  }
-  
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    
-    // Skip empty lines
-    if (!line || line.length < 10) continue;
-    
-    // Check if line starts with a date
-    const dateMatch = line.match(datePattern);
-    if (dateMatch && dateMatch.index === 0) {
-      const date = parseDate(dateMatch[1]);
-      console.info('MCB Parser: Found transaction date:', dateMatch[1], '→', date);
-      
-      // Try to find amount in this line
-      const amountMatches = line.match(new RegExp(amountPattern, 'g'));
-      if (amountMatches && amountMatches.length >= 1) {
-        // Last match is likely the balance, second-to-last is the amount
-        const balanceStr = amountMatches[amountMatches.length - 1];
-        const balance = parseAmount(balanceStr);
-        
-        let amount: number;
-        let type: 'credit' | 'debit';
-        if (amountMatches.length >= 2) {
-          const amountStr = amountMatches[amountMatches.length - 2];
-          amount = parseAmount(amountStr);
-          
-          // If current balance is higher than previous, it's a credit
-          type = balance > currentBalance ? 'credit' : 'debit';
-        } else {
-          // If we only found one number, assume it's the balance and calculate amount
-          amount = Math.abs(balance - currentBalance);
-          type = balance > currentBalance ? 'credit' : 'debit';
-        }
-        
-        // Get the main line by removing date and amounts
-        let mainLine = line
-          .replace(dateMatch[0], '')
-          .replace(new RegExp(amountPattern, 'g'), '')
-          .trim();
-        
-        // Extract reference and description
-        let reference = '';
-        let destinatory = '';
-        
-        // Try to find reference in the main line
-        const referenceMatch = mainLine.match(referencePattern);
-        if (referenceMatch) {
-          reference = referenceMatch[1].trim();
-          mainLine = mainLine.replace(reference, '').trim();
-          console.info('MCB Parser: Found reference:', reference);
-        }
-        
-        // Check next line for destinatory
-        if (i + 1 < lines.length) {
-          const nextLine = lines[i + 1].trim();
-          console.info('MCB Parser: Checking line for destinatory:', nextLine);
-          
-          // Check if next line does NOT start with a date and doesn't contain amount pattern
-          if (!nextLine.match(datePattern) && !nextLine.match(amountPattern) && nextLine.length > 0) {
-            // Check if it's not a reference line
-            if (!nextLine.match(referencePattern)) {
-              destinatory = nextLine;
-              console.info('MCB Parser: Found destinatory:', destinatory);
-              i++; // Skip the next line since we've used it
+    const transactions: ParsedTransaction[] = [];
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line); // Trim & remove empty lines
+    console.info(`MCB Parser V5: --- Starting Processing ---`);
+    console.info(`MCB Parser V5: Processing ${lines.length} non-empty lines.`);
+
+    // Regex V5: Matches concatenated dates, optional debit, optional credit, mandatory balance
+    // Groups: 1:TransDate, 2:ValueDate(ignored), 3:Optional Debit, 4:Optional Credit, 5:Balance
+    const dataLineRegex = /^(\d{2}\/\d{2}\/\d{4})(\d{2}\/\d{2}\/\d{4})([\d,.]*)\s*([\d,.]*)\s*([\d,]+\.\d{2})\s*$/;
+
+    // Reference pattern
+    const referenceRegex = /((?:JuicePro Transfer|Instant Payment|Inward Transfer|Cash Cheque|JUICE Payment|Direct Debit Scheme|Merchant Instant Payment|Tax Amount Due|Service Fee|Statement Fee)\s+(?:FT|TT)?[A-Z0-9]+)/i;
+    // Separator pattern
+    const separatorRegex = /(\\[A-Z]{3})/; // Like \BNK, \BPR etc.
+    // Keywords often preceding destinatory names
+    const destinatoryKeywords = ['BNK', 'BPR', 'MR', 'MRS', 'MISS', 'MS', 'LTD', 'CO', '&'];
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const match = line.match(dataLineRegex);
+
+        if (match) {
+            console.info(`\nMCB Parser V5: Matched data line ${i + 1}: "${line}"`);
+            const [, transDateStr, , debitStrRaw, creditStrRaw, balanceStr] = match;
+
+            const date = parseDate(transDateStr);
+            const debit = debitStrRaw ? parseAmount(debitStrRaw) : 0;
+            const credit = creditStrRaw ? parseAmount(creditStrRaw) : 0;
+            const balance = parseAmount(balanceStr);
+            const amount = Math.max(debit, credit);
+            const type = credit > 0 ? 'credit' : 'debit';
+
+            if (amount === 0 && credit === 0 && debit === 0) {
+                 console.warn(`  -> Skipping line ${i+1} due to zero amount.`);
+                 continue;
             }
-          }
+
+            // Now, look for the details on the *following* lines
+            let fullDetails = '';
+            let detailsLines = [];
+            let nextLineIndex = i + 1;
+            while (nextLineIndex < lines.length && !lines[nextLineIndex].match(dataLineRegex)) {
+                 const nextLine = lines[nextLineIndex];
+                 // Stop if we hit known non-detail lines
+                 if (nextLine.match(/Page :|Balance c\/f|Opening Balance/i) || nextLine.startsWith('---')) break;
+                 detailsLines.push(nextLine);
+                 console.info(`  -> Reading detail line ${nextLineIndex + 1}: "${nextLine}"`);
+                 nextLineIndex++;
+            }
+            // Crucially, update the main loop index ONLY AFTER processing details
+            i = nextLineIndex - 1;
+
+            fullDetails = detailsLines.join(' ').replace(/\s+/g, ' ').trim();
+            console.info(`  -> Combined Details: "${fullDetails}"`);
+
+
+            let description = fullDetails; // Default description
+            let reference = '';
+            let destinatory = '';
+
+            // --- Reference and Destinatory Extraction from fullDetails ---
+            const refMatch = fullDetails.match(referenceRegex);
+            if (refMatch && refMatch[0]) {
+                reference = refMatch[0].trim();
+                const refIndex = fullDetails.indexOf(reference);
+                const textBeforeRef = fullDetails.substring(0, refIndex).trim();
+                let textAfterRef = fullDetails.substring(refIndex + reference.length).trim();
+
+                // Description starts with text before ref + ref itself
+                description = (textBeforeRef ? textBeforeRef + ' ' : '') + reference;
+
+                const separatorMatch = textAfterRef.match(separatorRegex);
+                if (separatorMatch && separatorMatch.index !== undefined) {
+                    const partBeforeSep = textAfterRef.substring(0, separatorMatch.index).trim();
+                    const potentialDest = textAfterRef.substring(separatorMatch.index + separatorMatch[0].length).trim();
+                     description += (partBeforeSep ? ' ' + partBeforeSep : '') + separatorMatch[0]; // Add separator to desc
+                     if (potentialDest) {
+                         destinatory = potentialDest;
+                     }
+                     textAfterRef = ''; // Consumed
+                }
+
+                 if (textAfterRef) {
+                    const firstWordAfterRef = textAfterRef.split(' ')[0]?.toUpperCase();
+                    if (firstWordAfterRef && (destinatoryKeywords.includes(firstWordAfterRef) || textAfterRef.match(/^[A-Z\s.&'-]+LTD|^[A-Z\s.&'-]+CO LTD|^[MR|MRS|MS|MISS]+\s/i))) {
+                       destinatory = textAfterRef; // Assume remaining is destinatory
+                       // Decide if description should ONLY be reference if destinatory found? Let's keep it combined for now.
+                    } else {
+                         // Doesn't look like destinatory, append to description
+                        description += ' ' + textAfterRef;
+                    }
+                }
+            } else {
+                // No standard reference found
+                description = fullDetails;
+            }
+
+            // Final cleanups
+            description = description.replace(/\s+/g, ' ').trim();
+            reference = reference.replace(/\s+/g, ' ').trim();
+            destinatory = destinatory.replace(/\s+/g, ' ').trim();
+
+            const transaction: ParsedTransaction = {
+                date,
+                description,
+                amount,
+                type,
+                balance,
+                reference,
+                destinatory,
+                category: getCategoryFromDescription(description || reference)
+            };
+
+            console.info(`  -> FINAL Parsed Tx V5: D='${transaction.description}' | R='${transaction.reference}' | Dest='${transaction.destinatory}' | Amt=${transaction.amount} ${transaction.type} | Bal=${transaction.balance}`);
+            transactions.push(transaction);
         }
-        
-        // Clean up strings
-        mainLine = mainLine.replace(/\s+/g, ' ').trim();
-        reference = reference.replace(/\s+/g, ' ').trim();
-        destinatory = destinatory.replace(/\s+/g, ' ').trim();
-        
-        // Only add transaction if we have a valid amount
-        if (amount > 0) {
-          const transaction = {
-            date: date,
-            description: mainLine || reference,
-            amount,
-            type,
-            balance,
-            reference,
-            destinatory,
-            category: getCategoryFromDescription(mainLine || reference)
-          };
-          
-          console.info('MCB Parser: Adding transaction:', {
-            date: transaction.date,
-            reference: transaction.reference,
-            destinatory: transaction.destinatory ? `"${transaction.destinatory}"` : 'NONE',
-            amount: transaction.amount,
-            type: transaction.type
-          });
-          
-          transactions.push(transaction);
-          currentBalance = balance;
-        }
-      }
     }
-  }
-  
-  console.info(`MCB Parser: Extracted ${transactions.length} transactions`);
-  return transactions;
-} 
+
+    console.info(`MCB Parser V5: --- Finished Processing. Extracted ${transactions.length} transactions. ---`);
+    if(transactions.length === 0) {
+      console.error("MCB Parser V5 FAILED TO EXTRACT TRANSACTIONS. Review logs and PDF text.");
+    }
+    return transactions;
+}

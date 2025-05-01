@@ -1,0 +1,23 @@
+{
+  "version": "1.0",
+  "project": {
+    "name": "NovaFi",
+    "description": "NovaFi Accounting MVP with frontend and backend components"
+  },
+  "tasks": [
+    "mcb-parser-update",
+    "controller-update",
+    "model-verification",
+    "frontend-update",
+    "testing-verification",
+    "example-task"
+  ],
+  "mcp": {
+    "enabled": true,
+    "model": "default"
+  },
+  "directories": {
+    "backend": "./backend",
+    "frontend": "./frontend"
+  }
+} 

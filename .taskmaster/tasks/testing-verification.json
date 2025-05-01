@@ -1,0 +1,34 @@
+{
+  "id": "testing-verification",
+  "title": "Test and Verify Implementation",
+  "description": "Test the end-to-end flow from uploading MCB PDF statements to displaying the extracted 'destinatory' field in the frontend, ensuring proper parsing and data flow.",
+  "priority": "high",
+  "status": "todo",
+  "tags": ["testing", "verification", "quality"],
+  "components": ["backend", "frontend"],
+  "assignee": "",
+  "created": "2023-09-14T12:00:00Z",
+  "updated": "2023-09-14T12:00:00Z",
+  "subtasks": [
+    {
+      "title": "Test MCB PDF parsing with sample statements",
+      "completed": false
+    },
+    {
+      "title": "Verify destinatory field extraction accuracy",
+      "completed": false
+    },
+    {
+      "title": "Test database storage of the destinatory field",
+      "completed": false
+    },
+    {
+      "title": "Validate frontend display of destinatory information",
+      "completed": false
+    },
+    {
+      "title": "Test editing and sorting of destinatory field",
+      "completed": false
+    }
+  ]
+} 

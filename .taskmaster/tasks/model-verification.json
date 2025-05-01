@@ -1,0 +1,26 @@
+{
+  "id": "model-verification",
+  "title": "Verify Bank Transaction Model",
+  "description": "Confirm that the BankTransactionSchema in BankTransaction.ts includes the 'destinatory' field to ensure proper database storage.",
+  "priority": "medium",
+  "status": "in-progress",
+  "tags": ["backend", "model", "database"],
+  "components": ["backend"],
+  "assignee": "",
+  "created": "2023-09-14T12:00:00Z",
+  "updated": "2023-09-14T12:00:00Z",
+  "subtasks": [
+    {
+      "title": "Check if destinatory field exists in schema",
+      "completed": true
+    },
+    {
+      "title": "Add the field if missing",
+      "completed": true
+    },
+    {
+      "title": "Update schema validation if needed",
+      "completed": true
+    }
+  ]
+} 

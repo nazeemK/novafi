@@ -1,6 +1,6 @@
 import axios, { AxiosError } from 'axios';
 
-const API_URL = 'http://localhost:3002/api';
+const API_URL = 'http://localhost:3000/api';
 
 // Create an axios instance with better timeout and error handling
 const apiClient = axios.create({
@@ -285,7 +285,7 @@ export const exportTransactionsToCSV = async (filters?: {
     
     // Create CSV content with BOM for Excel compatibility
     let csvContent = "\ufeff";
-    csvContent += "Date,Description,Amount,Type,Balance\r\n";
+    csvContent += "Date,Description,Destinatory,Amount,Type,Balance,Reference\r\n";
     
     transactions.forEach(transaction => {
       // Format the date as YYYY-MM-DD
@@ -294,8 +294,18 @@ export const exportTransactionsToCSV = async (filters?: {
       // Format description - escape quotes and commas
       const description = `"${transaction.description.replace(/"/g, '""')}"`;
       
+      // Format destinatory - escape quotes and commas, use empty string if undefined
+      const destinatory = transaction.destinatory 
+        ? `"${transaction.destinatory.replace(/"/g, '""')}"` 
+        : '""';
+      
+      // Format reference - escape quotes and commas, use empty string if undefined
+      const reference = transaction.reference 
+        ? `"${transaction.reference.replace(/"/g, '""')}"` 
+        : '""';
+      
       // Add row to CSV with Windows line endings
-      csvContent += `${date},${description},${transaction.amount},${transaction.type},${transaction.balance}\r\n`;
+      csvContent += `${date},${description},${destinatory},${transaction.amount},${transaction.type},${transaction.balance},${reference}\r\n`;
     });
     
     // Create a blob and download it
@@ -337,6 +347,7 @@ export const updateBankTransaction = async (id: string, updatedTransaction: Part
     if (updatedTransaction.amount !== undefined) transaction.amount = updatedTransaction.amount;
     if (updatedTransaction.type !== undefined) transaction.type = updatedTransaction.type;
     if (updatedTransaction.balance !== undefined) transaction.balance = updatedTransaction.balance;
+    if (updatedTransaction.destinatory !== undefined) transaction.destinatory = updatedTransaction.destinatory;
     
     // In a real app, this would be an API call:
     // const response = await apiClient.put(`/bank-statements/transactions/${id}`, updatedTransaction);
@@ -365,7 +376,7 @@ export const exportSelectedTransactionsToCSV = async (transactions: BankTransact
   try {
     // Create CSV content with BOM for Excel compatibility
     let csvContent = "\ufeff";
-    csvContent += "Date,Description,Amount,Type,Balance\r\n";
+    csvContent += "Date,Description,Destinatory,Amount,Type,Balance,Reference\r\n";
     
     transactions.forEach(transaction => {
       // Format the date as YYYY-MM-DD
@@ -374,8 +385,18 @@ export const exportSelectedTransactionsToCSV = async (transactions: BankTransact
       // Format description - escape quotes and commas
       const description = `"${transaction.description.replace(/"/g, '""')}"`;
       
+      // Format destinatory - escape quotes and commas, use empty string if undefined
+      const destinatory = transaction.destinatory 
+        ? `"${transaction.destinatory.replace(/"/g, '""')}"` 
+        : '""';
+      
+      // Format reference - escape quotes and commas, use empty string if undefined
+      const reference = transaction.reference 
+        ? `"${transaction.reference.replace(/"/g, '""')}"` 
+        : '""';
+      
       // Add row to CSV with Windows line endings
-      csvContent += `${date},${description},${transaction.amount},${transaction.type},${transaction.balance}\r\n`;
+      csvContent += `${date},${description},${destinatory},${transaction.amount},${transaction.type},${transaction.balance},${reference}\r\n`;
     });
     
     // Create a blob and download it

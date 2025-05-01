@@ -1,0 +1,34 @@
+{
+  "id": "frontend-update",
+  "title": "Update Frontend Transaction View",
+  "description": "Modify the AllTransactionsView.vue component to display the 'destinatory' field in the transactions table with appropriate styling and editing capabilities.",
+  "priority": "high",
+  "status": "in-progress",
+  "tags": ["frontend", "ui", "vue"],
+  "components": ["frontend"],
+  "assignee": "",
+  "created": "2023-09-14T12:00:00Z",
+  "updated": "2023-09-14T12:00:00Z",
+  "subtasks": [
+    {
+      "title": "Add table header for Destinatory field",
+      "completed": true
+    },
+    {
+      "title": "Add table cell to display destinatory data",
+      "completed": true
+    },
+    {
+      "title": "Implement editing functionality for destinatory field",
+      "completed": true
+    },
+    {
+      "title": "Add CSS styling for destinatory column",
+      "completed": true
+    },
+    {
+      "title": "Add sorting capability for destinatory column",
+      "completed": true
+    }
+  ]
+} 
