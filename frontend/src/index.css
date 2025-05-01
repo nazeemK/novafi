@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global styles - consolidated from style.css and index.css */
+html {
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden; /* Prevent horizontal scroll */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+}
+
+body {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  background-color: #f8f3eb; /* Dashboard background globally */
+  color: #1f2937; /* Dark text for light theme */
+}
+
+#app {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  max-width: 100%;
+  margin: 0 auto;
+  text-align: center;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Basic elements styling */
+a {
+  font-weight: 500;
+  color: #0e7e74;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #0a5a54;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #0e7e74;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.25s;
+}
+button:hover {
+  background-color: #0a5a54;
+}
+button:focus,
+button:focus-visible {
+  outline: 3px solid rgba(14, 126, 116, 0.2);
+} 
