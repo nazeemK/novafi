@@ -1,6 +1,9 @@
 import axios, { AxiosError } from 'axios';
 
-const API_URL = 'http://localhost:3000/api';
+// Use a relative path in production, or localhost in development
+const API_URL = import.meta.env.PROD 
+  ? '/api' 
+  : import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 // Create an axios instance with better timeout and error handling
 const apiClient = axios.create({

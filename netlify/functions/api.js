@@ -20,7 +20,7 @@ const app = express();
 app.use(express.json());
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL || '*'
+    ? ['https://rainbow-caramel-3b82c0.netlify.app', process.env.FRONTEND_URL, '*']
     : '*',
   credentials: true
 }));
