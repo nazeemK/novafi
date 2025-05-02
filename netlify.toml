@@ -11,10 +11,6 @@
 [functions]
   directory = "netlify/functions"
 
-# Local cache-busting plugin
-[[plugins]]
-  package = "./netlify/build-plugins/cache-buster"
-
 # Plugin to automatically install function dependencies
 [[plugins]]
   package = "@netlify/plugin-functions-install-core"
