@@ -1,9 +1,10 @@
 import axios, { AxiosError } from 'axios';
 
-// Use a relative path in production, or localhost in development
-const API_URL = import.meta.env.PROD 
-  ? '/api' 
-  : import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// Force using relative URL in production
+const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const API_URL = isDev ? 'http://localhost:3000/api' : '/api';
+
+console.log('API URL being used:', API_URL);
 
 // Create an axios instance with better timeout and error handling
 const apiClient = axios.create({

@@ -6,13 +6,30 @@
 [build.environment]
   VITE_SKIP_TS_CHECK = "true"
   NODE_ENV = "development"
+  DEPLOY_TIMESTAMP = "${COMMIT_REF}"
 
 [functions]
   directory = "netlify/functions"
 
+# Local cache-busting plugin
+[[plugins]]
+  package = "./netlify/build-plugins/cache-buster"
+
 # Plugin to automatically install function dependencies
 [[plugins]]
   package = "@netlify/plugin-functions-install-core"
+
+# Set cache-control headers for all assets
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Set specific cache-control headers for assets that can be cached
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
 
 # Redirect API requests to our serverless function
 [[redirects]]
