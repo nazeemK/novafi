@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
+import { ref, reactive, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { uploadBankStatement, ProcessingResult } from '../services/bankStatementService';
 
@@ -11,6 +11,41 @@ const processingComplete = ref(false);
 const uploadError = ref('');
 const result = ref<ProcessingResult | null>(null);
 const statementCurrency = ref('USD'); // Default currency
+
+// Computed properties for summary data
+const transactionCount = computed(() => {
+  return result.value?.transactions?.length || 0;
+});
+
+const startDate = computed(() => {
+  return result.value?.statement?.startDate || '';
+});
+
+const endDate = computed(() => {
+  return result.value?.statement?.endDate || '';
+});
+
+const totalCredits = computed(() => {
+  if (!result.value?.transactions) return 0;
+  return result.value.transactions
+    .filter(t => t.type === 'credit')
+    .reduce((sum, t) => sum + t.amount, 0);
+});
+
+const totalDebits = computed(() => {
+  if (!result.value?.transactions) return 0;
+  return result.value.transactions
+    .filter(t => t.type === 'debit')
+    .reduce((sum, t) => sum + t.amount, 0);
+});
+
+const startBalance = computed(() => {
+  return result.value?.statement?.openingBalance || 0;
+});
+
+const endBalance = computed(() => {
+  return result.value?.statement?.closingBalance || 0;
+});
 
 // Form validation
 const handleFileChange = (event: Event) => {
@@ -63,17 +98,13 @@ const uploadFile = async () => {
     if (response.statement?.currency) {
       statementCurrency.value = response.statement.currency;
       console.log('Setting currency from statement:', statementCurrency.value);
-    } else if (response.summary?.currency) {
-      statementCurrency.value = response.summary.currency;
-      console.log('Setting currency from summary:', statementCurrency.value);
     }
     
     // Comprehensive debugging to see the data structure
     console.log('COMPLETE RESPONSE:', response);
     console.log('Statement object:', response.statement);
-    console.log('Summary object:', response.summary);
+    console.log('Transactions array length:', response.transactions?.length);
     console.log('Currency in statement:', response.statement?.currency);
-    console.log('Currency in summary:', response.summary?.currency);
     console.log('Selected currency:', statementCurrency.value);
     
     // Wait a moment to show 100% progress
@@ -114,12 +145,9 @@ const viewTransactions = () => {
 const formatCurrency = (amount) => {
   if (amount === undefined || amount === null) return '';
   
-  // Use MUR as the currency based on the logs from TransactionsView
-  console.log('Using currency for formatting: MUR');
-  
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'MUR'
+    currency: statementCurrency.value || 'USD'
   }).format(amount);
 };
 </script>
@@ -185,11 +213,11 @@ const formatCurrency = (amount) => {
         <div class="results-summary" v-if="result">
           <div class="result-card">
             <h3 class="card-title">Transactions</h3>
-            <div class="card-value">{{ result.summary.totalTransactions }}</div>
+            <div class="card-value">{{ transactionCount }}</div>
             <div class="card-details">
               <div class="detail-item">
                 <span>Period:</span>
-                <span class="value">{{ new Date(result.summary.startDate).toLocaleDateString() }} to {{ new Date(result.summary.endDate).toLocaleDateString() }}</span>
+                <span class="value">{{ startDate ? new Date(startDate).toLocaleDateString() : 'N/A' }} to {{ endDate ? new Date(endDate).toLocaleDateString() : 'N/A' }}</span>
               </div>
             </div>
           </div>
@@ -199,16 +227,16 @@ const formatCurrency = (amount) => {
             <div class="card-details financial">
               <div class="detail-item">
                 <span>Income:</span>
-                <span class="value income">{{ formatCurrency(result.summary.totalCredits) }}</span>
+                <span class="value income">{{ formatCurrency(totalCredits) }}</span>
               </div>
               <div class="detail-item">
                 <span>Expenses:</span>
-                <span class="value expense">{{ formatCurrency(result.summary.totalDebits) }}</span>
+                <span class="value expense">{{ formatCurrency(totalDebits) }}</span>
               </div>
               <div class="detail-item total">
                 <span>Net:</span>
-                <span class="value" :class="result.summary.totalCredits - result.summary.totalDebits > 0 ? 'income' : 'expense'">
-                  {{ formatCurrency(result.summary.totalCredits - result.summary.totalDebits) }}
+                <span class="value" :class="totalCredits - totalDebits > 0 ? 'income' : 'expense'">
+                  {{ formatCurrency(totalCredits - totalDebits) }}
                 </span>
               </div>
             </div>
@@ -219,16 +247,16 @@ const formatCurrency = (amount) => {
             <div class="card-details period">
               <div class="detail-item">
                 <span>Opening:</span>
-                <span class="value">{{ formatCurrency(result.summary.startBalance) }}</span>
+                <span class="value">{{ formatCurrency(startBalance) }}</span>
               </div>
               <div class="detail-item">
                 <span>Closing:</span>
-                <span class="value">{{ formatCurrency(result.summary.endBalance) }}</span>
+                <span class="value">{{ formatCurrency(endBalance) }}</span>
               </div>
               <div class="detail-item total">
                 <span>Change:</span>
-                <span class="value" :class="result.summary.endBalance - result.summary.startBalance > 0 ? 'income' : 'expense'">
-                  {{ formatCurrency(result.summary.endBalance - result.summary.startBalance) }}
+                <span class="value" :class="endBalance - startBalance > 0 ? 'income' : 'expense'">
+                  {{ formatCurrency(endBalance - startBalance) }}
                 </span>
               </div>
             </div>
