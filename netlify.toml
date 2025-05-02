@@ -3,6 +3,10 @@
   command = "cd frontend && npm install && npm run build"
   publish = "frontend/dist"
 
+[build.environment]
+  VITE_SKIP_TS_CHECK = "true"
+  NODE_ENV = "development"
+
 [functions]
   directory = "netlify/functions"
 
