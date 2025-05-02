@@ -69,8 +69,18 @@ export interface ProcessingResult {
   statementId: string;
   success: boolean;
   message: string;
-  statement: BankStatement;
-  transactions: BankTransaction[];
+  statement?: BankStatement;
+  transactions?: BankTransaction[];
+  summary?: {
+    totalTransactions?: number;
+    totalCredits?: number;
+    totalDebits?: number;
+    startBalance?: number;
+    endBalance?: number;
+    startDate?: string;
+    endDate?: string;
+    currency?: string;
+  };
 }
 
 // In-memory storage for transactions (fallback if API fails)
@@ -140,14 +150,31 @@ export const uploadBankStatement = async (file: File): Promise<ProcessingResult>
     });
     
     console.log('Server response from uploadBankStatement:', response.data);
+    
+    // Ensure we have a properly structured response
+    const result: ProcessingResult = {
+      statementId: response.data.statementId || `fallback-${Date.now()}`,
+      success: response.data.success !== false,
+      message: response.data.message || 'Processing complete',
+      statement: response.data.statement || null,
+      transactions: response.data.transactions || []
+    };
+    
+    // If we have a summary object, keep it
+    if (response.data.summary) {
+      result.summary = response.data.summary;
+    }
+    
+    // Log the structure for debugging
     console.log('Server response structure:', {
-      hasStatement: !!response.data.statement,
-      statementHasCurrency: !!response.data.statement?.currency,
-      hasSummary: !!response.data.summary,
-      summaryHasCurrency: !!response.data.summary?.currency,
+      hasStatement: !!result.statement,
+      statementHasCurrency: !!result.statement?.currency,
+      hasSummary: !!result.summary,
+      summaryHasCurrency: !!result.summary?.currency,
+      transactionsCount: result.transactions?.length || 0
     });
     
-    return response.data;
+    return result;
   } catch (error: unknown) {
     console.error('Error in uploadBankStatement:', error);
     if (axios.isAxiosError(error)) {

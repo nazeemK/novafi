@@ -91,19 +91,35 @@ const uploadFile = async () => {
     clearInterval(progressInterval);
     uploadProgress.value = 100;
     
+    // Validate response structure
+    if (!response) {
+      throw new Error('Empty response received from server');
+    }
+    
     // Store result and show success screen
     result.value = response;
     
-    // Extract and store the currency
+    // Validate required data is present
+    if (!response.transactions || !Array.isArray(response.transactions)) {
+      console.warn('No transactions array in response:', response);
+    }
+    
+    if (!response.statement) {
+      console.warn('No statement object in response:', response);
+    }
+    
+    // Extract and store the currency with a fallback
     if (response.statement?.currency) {
       statementCurrency.value = response.statement.currency;
       console.log('Setting currency from statement:', statementCurrency.value);
+    } else {
+      console.warn('No currency found in response, using default:', statementCurrency.value);
     }
     
     // Comprehensive debugging to see the data structure
     console.log('COMPLETE RESPONSE:', response);
     console.log('Statement object:', response.statement);
-    console.log('Transactions array length:', response.transactions?.length);
+    console.log('Transactions array length:', response.transactions?.length || 0);
     console.log('Currency in statement:', response.statement?.currency);
     console.log('Selected currency:', statementCurrency.value);
     
@@ -120,6 +136,8 @@ const uploadFile = async () => {
     
     if (error.response?.data?.message) {
       uploadError.value = error.response.data.message;
+    } else if (error.message) {
+      uploadError.value = `Error: ${error.message}`;
     } else {
       uploadError.value = 'Failed to process bank statement. Please try again.';
     }
@@ -145,10 +163,22 @@ const viewTransactions = () => {
 const formatCurrency = (amount) => {
   if (amount === undefined || amount === null) return '';
   
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: statementCurrency.value || 'USD'
-  }).format(amount);
+  // Add more defensive programming with a fallback
+  const safeCurrency = statementCurrency.value || 'USD';
+  
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: safeCurrency
+    }).format(amount);
+  } catch (error) {
+    console.error(`Error formatting currency with ${safeCurrency}:`, error);
+    // Fallback to basic formatting if there's an error with the currency
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  }
 };
 </script>
 
