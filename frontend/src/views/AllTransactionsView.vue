@@ -340,7 +340,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive, nextTick } from 'vue';
+import { ref, computed, onMounted, reactive, nextTick } from '@vue/runtime-core';
 import { 
   getBankTransactions, 
   exportTransactionsToCSV, 
@@ -348,7 +348,7 @@ import {
   exportSelectedTransactionsToCSV,
   deleteBankTransaction,
   deleteBankTransactions,
-  BankTransaction
+  type BankTransaction
 } from '../services/bankStatementService';
 
 // Type declarations

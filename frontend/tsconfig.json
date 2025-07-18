@@ -4,10 +4,8 @@
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" }
   ],
-  "compilerOptions": {
-    "vueCompilerOptions": {
-      "target": 3,
-      "globalTypesPath": "./src/types/global.d.ts"
-    }
+  "vueCompilerOptions": {
+    "target": 3,
+    "globalTypesPath": "./env.d.ts"
   }
 }

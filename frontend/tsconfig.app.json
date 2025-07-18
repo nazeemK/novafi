@@ -9,10 +9,11 @@
       "@/*": ["./src/*"]
     },
     "lib": ["ES2016", "DOM", "DOM.Iterable"],
-    "types": ["node"],
+    "types": ["node", "vue"],
     "target": "ES2016",
     "module": "ES2015",
     "moduleResolution": "node",
-    "noImplicitAny": false
+    "noImplicitAny": false,
+    "verbatimModuleSyntax": true
   }
 }
