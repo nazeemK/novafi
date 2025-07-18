@@ -766,16 +766,17 @@ const deleteSelected = async () => {
     if (Array.isArray(deleteTarget.value)) {
       await deleteBankTransactions(deleteTarget.value);
       selectedIds.value = []; // Clear selection
+      // Update local transactions list
+      allTransactions.value = allTransactions.value.filter(t => !deleteTarget.value.includes(t._id!));
     } else {
       await deleteBankTransaction(deleteTarget.value);
       const index = selectedIds.value.indexOf(deleteTarget.value);
       if (index !== -1) {
         selectedIds.value.splice(index, 1);
       }
+      // Update local transactions list
+      allTransactions.value = allTransactions.value.filter(t => t._id !== deleteTarget.value);
     }
-    
-    // Refresh the transactions list
-    await fetchTransactions();
     
     // Show success message
     successMessage.value = connectionStatus.value === 'connected'
