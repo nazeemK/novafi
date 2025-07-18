@@ -13,8 +13,15 @@
       >
         {{ editMode ? 'Exit Edit Mode' : 'Edit Mode' }}
       </button>
-      <div v-if="selectedIds.length > 0" class="selected-count">
-        {{ selectedIds.length }} transaction(s) selected
+      <div v-if="selectedIds.length > 0" class="selected-actions">
+        <span class="selected-count">{{ selectedIds.length }} transaction(s) selected</span>
+        <button 
+          class="delete-btn" 
+          @click="confirmDeleteSelected"
+          :disabled="loading"
+        >
+          Delete Selected
+        </button>
       </div>
     </div>
     
@@ -302,6 +309,7 @@
               </div>
               <div class="action-buttons" v-else>
                 <button class="edit-btn" @click="startEdit(transaction)">Edit</button>
+                <button class="delete-btn" @click="confirmDeleteSingle(transaction._id)">Delete</button>
               </div>
             </td>
           </tr>
@@ -314,6 +322,21 @@
       <button class="reset-btn" @click="resetFilters">Reset Filters</button>
     </div>
   </div>
+
+  <!-- Add confirmation dialog -->
+  <div v-if="showDeleteConfirm" class="delete-confirm-overlay">
+    <div class="delete-confirm-dialog">
+      <h3>Confirm Delete</h3>
+      <p>Are you sure you want to delete {{ selectedIds.length }} transaction(s)?</p>
+      <p class="warning">This action cannot be undone.</p>
+      <div class="dialog-actions">
+        <button class="cancel-btn" @click="showDeleteConfirm = false">Cancel</button>
+        <button class="delete-btn" @click="deleteSelected" :disabled="loading">
+          {{ loading ? 'Deleting...' : 'Delete' }}
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -323,29 +346,47 @@ import {
   exportTransactionsToCSV, 
   updateBankTransaction,
   exportSelectedTransactionsToCSV,
+  deleteBankTransaction,
+  deleteBankTransactions,
   BankTransaction
 } from '../services/bankStatementService';
 
-const allTransactions = ref<any[]>([]);
-const loading = ref(true);
+// Type declarations
+interface Filters {
+  search: string;
+  startDate: string;
+  endDate: string;
+  type: 'all' | 'credit' | 'debit';
+  minAmount: string;
+  maxAmount: string;
+  bank: string;
+}
+
+// State
+const allTransactions = ref<BankTransaction[]>([]);
+const loading = ref<boolean>(true);
 const error = ref<string | null>(null);
 const successMessage = ref<string | null>(null);
 const connectionStatus = ref<'connected' | 'limited' | 'disconnected'>('connected');
 
 // Sorting
-const sortKey = ref('date');
-const sortOrder = ref('desc');
+const sortKey = ref<string>('date');
+const sortOrder = ref<'asc' | 'desc'>('desc');
 
 // Edit mode
-const editMode = ref(false);
+const editMode = ref<boolean>(false);
 const editingId = ref<string | null>(null);
-const editedTransaction = ref<any>({});
+const editedTransaction = ref<Partial<BankTransaction>>({});
 
 // Selection
 const selectedIds = ref<string[]>([]);
 
+// Delete confirmation
+const showDeleteConfirm = ref<boolean>(false);
+const deleteTarget = ref<string | string[]>('');
+
 // Filters
-const filters = reactive({
+const filters = reactive<Filters>({
   search: '',
   startDate: '',
   endDate: '',
@@ -357,7 +398,7 @@ const filters = reactive({
 
 // Get all unique banks
 const banksList = computed(() => {
-  const banks = new Set(allTransactions.value.map(t => t.bank).filter(Boolean));
+  const banks = new Set(allTransactions.value.map((t: BankTransaction) => t.bank).filter(Boolean));
   return [...banks];
 });
 
@@ -371,10 +412,15 @@ const toggleEditMode = () => {
 };
 
 // Start editing a transaction
-const startEdit = (transaction: any) => {
+const startEdit = (transaction: BankTransaction) => {
   // First, cancel any existing edit
   if (editingId.value) {
     cancelEdit();
+  }
+  
+  if (!transaction._id) {
+    console.error('Transaction has no ID');
+    return;
   }
   
   editingId.value = transaction._id;
@@ -479,7 +525,7 @@ const cancelEdit = () => {
 };
 
 // Selection functions
-const toggleSelect = (id: string) => {
+const toggleSelect = (id: string): void => {
   const index = selectedIds.value.indexOf(id);
   if (index === -1) {
     selectedIds.value.push(id);
@@ -488,27 +534,27 @@ const toggleSelect = (id: string) => {
   }
 };
 
-const isSelected = (id: string) => {
+const isSelected = (id: string): boolean => {
   return selectedIds.value.includes(id);
 };
 
-const toggleSelectAll = () => {
+const toggleSelectAll = (): void => {
   if (selectedIds.value.length === filteredTransactions.value.length) {
     // Deselect all
     selectedIds.value = [];
   } else {
     // Select all filtered transactions
-    selectedIds.value = filteredTransactions.value.map(t => t._id);
+    selectedIds.value = filteredTransactions.value.map((t: BankTransaction) => t._id!);
   }
 };
 
-const allSelected = computed(() => {
+const allSelected = computed((): boolean => {
   return filteredTransactions.value.length > 0 && 
          selectedIds.value.length === filteredTransactions.value.length;
 });
 
-const selectedTransactions = computed(() => {
-  return filteredTransactions.value.filter(t => selectedIds.value.includes(t._id));
+const selectedTransactions = computed((): BankTransaction[] => {
+  return filteredTransactions.value.filter((t: BankTransaction) => selectedIds.value.includes(t._id!));
 });
 
 // Export selected transactions to CSV
@@ -578,10 +624,10 @@ onMounted(async () => {
   fetchTransactions();
 });
 
-// Filtered transactions
-const filteredTransactions = computed(() => {
+// Filtered transactions with type annotations
+const filteredTransactions = computed((): BankTransaction[] => {
   return allTransactions.value
-    .filter(transaction => {
+    .filter((transaction: BankTransaction) => {
       // Search filter
       if (filters.search && !transaction.description.toLowerCase().includes(filters.search.toLowerCase())) {
         return false;
@@ -608,11 +654,9 @@ const filteredTransactions = computed(() => {
         return false;
       }
       
-      // Bank filter (removed)
-      
       return true;
     })
-    .sort((a, b) => {
+    .sort((a: BankTransaction, b: BankTransaction) => {
       // Sort by selected key
       if (sortKey.value === 'date') {
         return sortOrder.value === 'asc' 
@@ -652,12 +696,12 @@ const filteredSummary = computed(() => {
 });
 
 // Helper functions
-const formatDate = (dateString) => {
+const formatDate = (dateString: string): string => {
   if (!dateString) return '';
   return new Date(dateString).toLocaleDateString();
 };
 
-const formatCurrency = (amount) => {
+const formatCurrency = (amount: number): string => {
   if (amount === undefined || amount === null) return '';
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -665,7 +709,7 @@ const formatCurrency = (amount) => {
   }).format(amount);
 };
 
-const sortBy = (key) => {
+const sortBy = (key: string): void => {
   if (sortKey.value === key) {
     sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
   } else {
@@ -701,6 +745,54 @@ const exportToCSV = () => {
   } catch (error) {
     console.error('Error exporting to CSV:', error);
     // You could add error notification here
+  }
+};
+
+const confirmDeleteSingle = (id: string) => {
+  deleteTarget.value = id;
+  showDeleteConfirm.value = true;
+};
+
+const confirmDeleteSelected = () => {
+  deleteTarget.value = selectedIds.value;
+  showDeleteConfirm.value = true;
+};
+
+const deleteSelected = async () => {
+  loading.value = true;
+  error.value = null;
+  
+  try {
+    if (Array.isArray(deleteTarget.value)) {
+      await deleteBankTransactions(deleteTarget.value);
+      selectedIds.value = []; // Clear selection
+    } else {
+      await deleteBankTransaction(deleteTarget.value);
+      const index = selectedIds.value.indexOf(deleteTarget.value);
+      if (index !== -1) {
+        selectedIds.value.splice(index, 1);
+      }
+    }
+    
+    // Refresh the transactions list
+    await fetchTransactions();
+    
+    // Show success message
+    successMessage.value = connectionStatus.value === 'connected'
+      ? 'Transaction(s) deleted successfully!'
+      : 'Transaction(s) deleted locally (offline mode)';
+    
+    // Auto-hide success message after 3 seconds
+    setTimeout(() => {
+      successMessage.value = null;
+    }, 3000);
+  } catch (err: any) {
+    console.error('Error deleting transactions:', err);
+    error.value = err.message || 'Failed to delete transactions. Please try again.';
+  } finally {
+    loading.value = false;
+    showDeleteConfirm.value = false;
+    deleteTarget.value = '';
   }
 };
 </script>
@@ -1107,5 +1199,75 @@ tr:hover {
 
 .warning-text {
   flex: 1;
+}
+
+.delete-btn {
+  background-color: #dc2626;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.delete-btn:hover {
+  background-color: #b91c1c;
+}
+
+.delete-btn:disabled {
+  background-color: #f87171;
+  cursor: not-allowed;
+}
+
+.delete-confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.delete-confirm-dialog {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  max-width: 400px;
+  width: 90%;
+}
+
+.delete-confirm-dialog h3 {
+  margin: 0 0 1rem 0;
+  color: #1f2937;
+}
+
+.delete-confirm-dialog p {
+  margin: 0 0 1rem 0;
+  color: #4b5563;
+}
+
+.delete-confirm-dialog .warning {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.selected-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 </style> 

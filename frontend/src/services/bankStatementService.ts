@@ -52,6 +52,7 @@ export interface BankTransaction {
   reference?: string;
   destinatory?: string;
   statementId?: string;
+  bank?: string;
 }
 
 export interface BankStatement {
@@ -441,6 +442,53 @@ export const exportSelectedTransactionsToCSV = async (transactions: BankTransact
     document.body.removeChild(link);
   } catch (error) {
     console.error('Error exporting transactions:', error);
+    throw error;
+  }
+}; 
+
+/**
+ * Delete a single bank transaction
+ * @param id Transaction ID to delete
+ */
+export const deleteBankTransaction = async (id: string): Promise<void> => {
+  try {
+    console.log(`Deleting transaction with ID: ${id}`);
+    
+    // For demo/test purposes, we'll delete the transaction locally
+    // since the demo backend might not support deletes
+    const index = cachedTransactions.findIndex(t => t._id === id);
+    if (index !== -1) {
+      cachedTransactions.splice(index, 1);
+      console.log('Transaction deleted locally');
+    } else {
+      throw new Error('Transaction not found');
+    }
+    
+    // In a real app, this would be an API call:
+    // await apiClient.delete(`/bank-statements/transactions/${id}`);
+  } catch (error) {
+    console.error('Error deleting transaction:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete multiple bank transactions
+ * @param ids Array of transaction IDs to delete
+ */
+export const deleteBankTransactions = async (ids: string[]): Promise<void> => {
+  try {
+    console.log(`Deleting ${ids.length} transactions`);
+    
+    // For demo/test purposes, we'll delete the transactions locally
+    // since the demo backend might not support bulk deletes
+    cachedTransactions = cachedTransactions.filter(t => !ids.includes(t._id!));
+    console.log(`${ids.length} transactions deleted locally`);
+    
+    // In a real app, this would be an API call:
+    // await apiClient.post(`/bank-statements/transactions/bulk-delete`, { ids });
+  } catch (error) {
+    console.error('Error deleting transactions:', error);
     throw error;
   }
 }; 
