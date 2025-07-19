@@ -14,4 +14,8 @@ router.get('/:id', bankStatementController.getBankStatementById);
 // Upload and process a bank statement
 router.post('/upload', bankStatementController.uploadBankStatement);
 
+// Delete routes
+router.delete('/transactions/:id', bankStatementController.deleteBankTransaction);
+router.post('/transactions/bulk-delete', bankStatementController.deleteBankTransactions);
+
 module.exports = router; 

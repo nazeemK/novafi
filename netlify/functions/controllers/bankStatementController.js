@@ -142,3 +142,37 @@ exports.getAllTransactions = async (req, res) => {
     res.status(500).json({ message: 'Failed to retrieve transactions' });
   }
 }; 
+
+// Delete a single transaction
+exports.deleteBankTransaction = async (req, res) => {
+  try {
+    const transactionId = req.params.id;
+    
+    // Find and delete the transaction
+    await BankTransaction.deleteOne({ _id: transactionId });
+    
+    res.json({ message: 'Transaction deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting transaction:', error);
+    res.status(500).json({ message: 'Failed to delete transaction' });
+  }
+};
+
+// Delete multiple transactions
+exports.deleteBankTransactions = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: 'Invalid transaction IDs provided' });
+    }
+    
+    // Delete multiple transactions
+    await BankTransaction.deleteMany({ _id: { $in: ids } });
+    
+    res.json({ message: `${ids.length} transactions deleted successfully` });
+  } catch (error) {
+    console.error('Error deleting transactions:', error);
+    res.status(500).json({ message: 'Failed to delete transactions' });
+  }
+}; 
