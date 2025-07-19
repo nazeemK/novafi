@@ -327,7 +327,7 @@
   <div v-if="showDeleteConfirm" class="delete-confirm-overlay">
     <div class="delete-confirm-dialog">
       <h3>Confirm Delete</h3>
-      <p>Are you sure you want to delete {{ selectedIds.length }} transaction(s)?</p>
+      <p>Are you sure you want to delete {{ Array.isArray(deleteTarget) ? deleteTarget.length : 1 }} transaction(s)?</p>
       <p class="warning">This action cannot be undone.</p>
       <div class="dialog-actions">
         <button class="cancel-btn" @click="showDeleteConfirm = false">Cancel</button>
@@ -754,7 +754,8 @@ const confirmDeleteSingle = (id: string) => {
 };
 
 const confirmDeleteSelected = () => {
-  deleteTarget.value = selectedIds.value;
+  console.log('Selected IDs for deletion:', selectedIds.value);
+  deleteTarget.value = [...selectedIds.value]; // Create a copy
   showDeleteConfirm.value = true;
 };
 
@@ -763,12 +764,16 @@ const deleteSelected = async () => {
   error.value = null;
   
   try {
+    console.log('Delete target:', deleteTarget.value);
+    
     if (Array.isArray(deleteTarget.value)) {
+      console.log(`Deleting ${deleteTarget.value.length} transactions:`, deleteTarget.value);
       await deleteBankTransactions(deleteTarget.value);
       selectedIds.value = []; // Clear selection
       // Update local transactions list
       allTransactions.value = allTransactions.value.filter(t => !deleteTarget.value.includes(t._id!));
     } else {
+      console.log('Deleting single transaction:', deleteTarget.value);
       await deleteBankTransaction(deleteTarget.value);
       const index = selectedIds.value.indexOf(deleteTarget.value);
       if (index !== -1) {

@@ -161,18 +161,41 @@ exports.deleteBankTransaction = async (req, res) => {
 // Delete multiple transactions
 exports.deleteBankTransactions = async (req, res) => {
   try {
+    console.log('Delete request received:', JSON.stringify(req.body));
     const { ids } = req.body;
     
-    if (!Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ message: 'Invalid transaction IDs provided' });
+    if (!ids) {
+      console.log('No ids provided in request body');
+      return res.status(400).json({ message: 'No transaction IDs provided' });
     }
     
-    // Delete multiple transactions
-    await BankTransaction.deleteMany({ _id: { $in: ids } });
+    if (!Array.isArray(ids)) {
+      console.log('ids is not an array:', typeof ids, ids);
+      return res.status(400).json({ message: 'Transaction IDs must be an array' });
+    }
     
-    res.json({ message: `${ids.length} transactions deleted successfully` });
+    if (ids.length === 0) {
+      console.log('Empty ids array provided');
+      return res.status(400).json({ message: 'No transaction IDs provided' });
+    }
+    
+    console.log(`Attempting to delete ${ids.length} transactions:`, ids);
+    
+    // Delete multiple transactions
+    const result = await BankTransaction.deleteMany({ _id: { $in: ids } });
+    
+    console.log(`Delete result:`, result);
+    
+    res.json({ 
+      message: `${result.deletedCount} transactions deleted successfully`,
+      deletedCount: result.deletedCount,
+      requestedCount: ids.length
+    });
   } catch (error) {
     console.error('Error deleting transactions:', error);
-    res.status(500).json({ message: 'Failed to delete transactions' });
+    res.status(500).json({ 
+      message: 'Failed to delete transactions',
+      error: error.message 
+    });
   }
 }; 
