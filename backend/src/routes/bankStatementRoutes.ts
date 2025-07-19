@@ -6,7 +6,9 @@ import {
   uploadBankStatement, 
   getBankStatement, 
   getAllBankStatements,
-  getAllTransactions
+  getAllTransactions,
+  deleteBankTransaction,
+  deleteBankTransactions
 } from '../controllers/bankStatementController';
 
 const router = express.Router();
@@ -58,5 +60,9 @@ router.post('/upload', upload.single('statement'), uploadBankStatement);
 router.get('/transactions', getAllTransactions);
 router.get('/:id', getBankStatement);
 router.get('/', getAllBankStatements);
+
+// Add delete routes
+router.delete('/transactions/:id', deleteBankTransaction);
+router.post('/transactions/bulk-delete', deleteBankTransactions);
 
 export default router; 

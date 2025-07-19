@@ -454,18 +454,15 @@ export const deleteBankTransaction = async (id: string): Promise<void> => {
   try {
     console.log(`Deleting transaction with ID: ${id}`);
     
-    // For demo/test purposes, we'll delete the transaction locally
-    // since the demo backend might not support deletes
+    // Make API call to delete the transaction
+    await apiClient.delete(`/bank-statements/transactions/${id}`);
+    
+    // Update local cache
     const index = cachedTransactions.findIndex(t => t._id === id);
     if (index !== -1) {
       cachedTransactions.splice(index, 1);
-      console.log('Transaction deleted locally');
-    } else {
-      throw new Error('Transaction not found');
+      console.log('Transaction deleted from local cache');
     }
-    
-    // In a real app, this would be an API call:
-    // await apiClient.delete(`/bank-statements/transactions/${id}`);
   } catch (error) {
     console.error('Error deleting transaction:', error);
     throw error;
@@ -480,13 +477,12 @@ export const deleteBankTransactions = async (ids: string[]): Promise<void> => {
   try {
     console.log(`Deleting ${ids.length} transactions`);
     
-    // For demo/test purposes, we'll delete the transactions locally
-    // since the demo backend might not support bulk deletes
-    cachedTransactions = cachedTransactions.filter(t => !ids.includes(t._id!));
-    console.log(`${ids.length} transactions deleted locally`);
+    // Make API call to delete the transactions
+    await apiClient.post(`/bank-statements/transactions/bulk-delete`, { ids });
     
-    // In a real app, this would be an API call:
-    // await apiClient.post(`/bank-statements/transactions/bulk-delete`, { ids });
+    // Update local cache
+    cachedTransactions = cachedTransactions.filter(t => !ids.includes(t._id!));
+    console.log(`${ids.length} transactions deleted from local cache`);
   } catch (error) {
     console.error('Error deleting transactions:', error);
     throw error;

@@ -232,3 +232,50 @@ async function categorizeBankTransactions(statementId: mongoose.Types.ObjectId) 
     return false;
   }
 } 
+
+/**
+ * Delete a single bank transaction
+ */
+export const deleteBankTransaction = async (req: Request, res: Response) => {
+  try {
+    const transactionId = req.params.id;
+    
+    const transaction = await BankTransaction.findById(transactionId);
+    if (!transaction) {
+      return res.status(404).json({ message: 'Transaction not found' });
+    }
+    
+    await BankTransaction.deleteOne({ _id: transactionId });
+    
+    res.json({ message: 'Transaction deleted successfully' });
+  } catch (error: unknown) {
+    console.error('Error deleting transaction:', error);
+    return res.status(500).json({ 
+      message: 'Error deleting transaction', 
+      error: error instanceof Error ? error.message : String(error) 
+    });
+  }
+};
+
+/**
+ * Delete multiple bank transactions
+ */
+export const deleteBankTransactions = async (req: Request, res: Response) => {
+  try {
+    const { ids } = req.body;
+    
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: 'Invalid transaction IDs provided' });
+    }
+    
+    await BankTransaction.deleteMany({ _id: { $in: ids } });
+    
+    res.json({ message: `${ids.length} transactions deleted successfully` });
+  } catch (error: unknown) {
+    console.error('Error deleting transactions:', error);
+    return res.status(500).json({ 
+      message: 'Error deleting transactions', 
+      error: error instanceof Error ? error.message : String(error) 
+    });
+  }
+}; 
